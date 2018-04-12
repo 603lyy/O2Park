@@ -28,5 +28,8 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
     implementation files('libs/autobahn-0.5.0.jar')
     implementation 'com.google.code.gson:gson:2.2.4'
+    //网络请求工具
+    implementation 'org.xutils:xutils:3.3.42'
+    implementation 'com.google.code.gson:gson:2.2.4'
     implementation files('libs/Msc.jar')
 }

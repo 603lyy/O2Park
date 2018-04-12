@@ -9,12 +9,16 @@ import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechSynthesizer;
 import com.iflytek.cloud.SynthesizerListener;
+import com.iflytek.cloud.util.ResourceUtil;
 
 public class AudioUtils {
 
     private static AudioUtils audioUtils;
 
-    private SpeechSynthesizer mySynthesizer;
+    private static SpeechSynthesizer mySynthesizer;
+
+    // 默认本地发音人
+    public static String voicerLocal = "xiaoyan";
 
     public AudioUtils() {
     }
@@ -47,13 +51,29 @@ public class AudioUtils {
     public void init(Context context) {
         //处理语音合成关键类
         mySynthesizer = SpeechSynthesizer.createSynthesizer(context, myInitListener);
+        //设置使用本地引擎
+        mySynthesizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+        mySynthesizer.setParameter(SpeechConstant.ENGINE_MODE, SpeechConstant.MODE_MSC);
+        //设置发音人资源路径
+        mySynthesizer.setParameter(ResourceUtil.TTS_RES_PATH, getResourcePath(context));
         //设置发音人
-        mySynthesizer.setParameter(SpeechConstant.VOICE_NAME, "xiaoyan");
+//        mySynthesizer.setParameter(SpeechConstant.VOICE_NAME, "xiaoyan");
         //设置音调
-        mySynthesizer.setParameter(SpeechConstant.PITCH, "50");
+//        mySynthesizer.setParameter(SpeechConstant.PITCH, "50");
         //设置音量
-        mySynthesizer.setParameter(SpeechConstant.VOLUME, "50");
+//        mySynthesizer.setParameter(SpeechConstant.VOLUME, "50");
 
+    }
+
+    //获取发音人资源路径
+    private String getResourcePath(Context context) {
+        StringBuffer tempBuffer = new StringBuffer();
+        //合成通用资源
+        tempBuffer.append(ResourceUtil.generateResourcePath(context, ResourceUtil.RESOURCE_TYPE.assets, "tts/common.jet"));
+        tempBuffer.append(";");
+        //发音人资源
+        tempBuffer.append(ResourceUtil.generateResourcePath(context, ResourceUtil.RESOURCE_TYPE.assets, "tts/" + voicerLocal + ".jet"));
+        return tempBuffer.toString();
     }
 
     /**
@@ -96,5 +116,12 @@ public class AudioUtils {
 
             }
         });
+    }
+
+    public static void destorySpeak() {
+        if (mySynthesizer != null) {
+            mySynthesizer.stopSpeaking();
+            mySynthesizer.destroy();
+        }
     }
 }
