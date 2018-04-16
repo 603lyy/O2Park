@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
     private RelativeLayout relativeLayout;
 
-    private LinearLayout llVoice;
+    private LinearLayout llVoice,llBg;
 
     private SpannableString ss;
 
@@ -75,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main);
 
+        llBg = findViewById(R.id.ll_bg);
         tvOpen = findViewById(R.id.tv_open);
         tvSend = findViewById(R.id.tv_send);
         tvName = findViewById(R.id.tv_name);
@@ -96,22 +97,23 @@ public class MainActivity extends AppCompatActivity {
         tvSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                showWellcomeView();
-//                if(!AudioUtils.getInstance().isSpeaking()){
-//                    ss = new SpannableString(nameStr[i] + "\n" + companyStr[i]);
-//                    ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr.length - 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-//                    ss.setSpan(new AbsoluteSizeSpan(35), nameStr.length - 1, ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-//                    tvName.setText(ss);
-//                }
-//                AudioUtils.getInstance().addText("欢迎" + nameStr[i] + "的莅临");
-//                i++;
-//                if (i == 10) {
-//                    i = 0;
-//                }
-                SpannableString span = new SpannableString(nameStr[0] + "\n" + companyStr[0]);
-                span.setSpan(new AbsoluteSizeSpan(14), 0, 7, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                span.setSpan(new AbsoluteSizeSpan(8), 8, span.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                groupView.addName(span);
+                showWellcomeView();
+                if(!AudioUtils.getInstance().isSpeaking()){
+                    ss = new SpannableString(nameStr[i] + "\n" + companyStr[i]);
+                    ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr.length - 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    ss.setSpan(new AbsoluteSizeSpan(35), nameStr.length - 1, ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    tvName.setText(ss);
+                }
+                AudioUtils.getInstance().addText("欢迎" + nameStr[i] + "的莅临");
+                i++;
+                if (i == 10) {
+                    i = 0;
+                }
+
+//                SpannableString span = new SpannableString(nameStr[0] + "\n" + companyStr[0]);
+//                span.setSpan(new AbsoluteSizeSpan(14), 0, 7, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+//                span.setSpan(new AbsoluteSizeSpan(8), 8, span.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+//                groupView.addName(span);
             }
         });
 
@@ -136,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    //属性动画监听
     private Animator.AnimatorListener animatorListener = new Animator.AnimatorListener() {
         @Override
         public void onAnimationStart(Animator animator) {
@@ -165,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    //语音播放监听
     private SynthesizerListener speakListener = new SynthesizerListener() {
         @Override
         public void onSpeakBegin() {
@@ -299,6 +303,9 @@ public class MainActivity extends AppCompatActivity {
         ViewGroup.LayoutParams Params = groupView.getLayoutParams();
         Params.width = relativeLayout.getHeight();
         groupView.setLayoutParams(Params);
+//        ViewGroup.LayoutParams ParamsBg = llBg.getLayoutParams();
+//        ParamsBg.width = relativeLayout.getHeight();
+//        groupView.setLayoutParams(ParamsBg);
     }
 
     public void showWellcomeView(){

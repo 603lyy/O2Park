@@ -8,6 +8,7 @@ import android.util.AttributeSet;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
+import com.yaheen.o2park.R;
 import com.yaheen.o2park.util.ValueAnimatorUtils;
 
 import java.util.Random;
@@ -183,7 +184,7 @@ public class NameGroupView extends RelativeLayout {
         if (circleDegree % 360 == -90) {
             endY = endY + 20;
             endX = endX - 10;
-        }else if(circleDegree % 360 == 90){
+        } else if (circleDegree % 360 == 90) {
             endY = endY - 20;
             endX = endX + 5;
         }
