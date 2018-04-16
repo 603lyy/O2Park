@@ -21,7 +21,8 @@ public class ValueAnimatorUtils {
      */
     private static float[] mCurrentPosition = new float[2];
 
-    public static void transferName(final View nameView, int[] startLoc, final int[] endLoc, final int[] parentSize) {
+    public static void transferName(final View nameView, float[] startLoc, final float[] endLoc,
+                                    final float[] parentSize, Animator.AnimatorListener listener) {
 
 //        三、正式开始计算动画开始/结束的坐标
         //开始掉落的商品的起始点
@@ -72,26 +73,6 @@ public class ValueAnimatorUtils {
         valueAnimator.start();
 
 //      六、动画结束后的处理
-        valueAnimator.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animation) {
-
-            }
-
-            //当动画结束后：
-            @Override
-            public void onAnimationEnd(Animator animation) {
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animator animation) {
-
-            }
-        });
+        valueAnimator.addListener(listener);
     }
 }

@@ -11,14 +11,25 @@ import com.iflytek.cloud.SpeechSynthesizer;
 import com.iflytek.cloud.SynthesizerListener;
 import com.iflytek.cloud.util.ResourceUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class AudioUtils {
 
     private static AudioUtils audioUtils;
 
     private static SpeechSynthesizer mySynthesizer;
 
+    private static SynthesizerListener synthesizerListener;
+
+    private Context context;
+
     // 默认本地发音人
     public static String voicerLocal = "xiaoyan";
+
+    private List<String> nameList = new ArrayList<>();
+
+    private int index = 0;
 
     public AudioUtils() {
     }
@@ -48,7 +59,10 @@ public class AudioUtils {
     /**
      * 描述:初始化语音配置
      */
-    public void init(Context context) {
+    public void init(Context context, SynthesizerListener listener) {
+        this.context = context;
+        synthesizerListener = listener;
+
         //处理语音合成关键类
         mySynthesizer = SpeechSynthesizer.createSynthesizer(context, myInitListener);
         //设置使用本地引擎
@@ -76,46 +90,46 @@ public class AudioUtils {
         return tempBuffer.toString();
     }
 
+    public void addText(String content) {
+        nameList.add(content);
+        if (!mySynthesizer.isSpeaking()) {
+            speakText(nameList.get(index));
+        }
+    }
+
+    public void speakText() {
+        if (index == nameList.size()) {
+            return;
+        }
+        speakText(nameList.get(index));
+    }
+
     /**
      * 描述:根据传入的文本转换音频并播放
      */
-    public void speakText(String content) {
-        int code = mySynthesizer.startSpeaking(content, new SynthesizerListener() {
-            @Override
-            public void onSpeakBegin() {
+    private void speakText(String content) {
+        if (mySynthesizer.isSpeaking()) {
+            return;
+        }
+        index++;
 
-            }
+        mySynthesizer.startSpeaking(content, synthesizerListener);
+    }
 
-            @Override
-            public void onBufferProgress(int i, int i1, int i2, String s) {
+    public boolean hasNext(){
+        if(index==nameList.size()){
+            return false;
+        }else {
+            return true;
+        }
+    }
 
-            }
+    public boolean isSpeaking(){
+        return mySynthesizer.isSpeaking();
+    }
 
-            @Override
-            public void onSpeakPaused() {
-
-            }
-
-            @Override
-            public void onSpeakResumed() {
-
-            }
-
-            @Override
-            public void onSpeakProgress(int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void onCompleted(SpeechError speechError) {
-
-            }
-
-            @Override
-            public void onEvent(int i, int i1, int i2, Bundle bundle) {
-
-            }
-        });
+    public int getIndex() {
+        return (index - 1)%10;
     }
 
     public static void destorySpeak() {

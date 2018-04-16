@@ -2,6 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rl_parent"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
@@ -12,13 +13,43 @@
         android:layout_height="50dp"
         android:gravity="center"
         android:padding="10dp"
-        android:text="连接服务器" />
+        android:text="打开界面" />
+
+    <TextView
+        android:id="@+id/tv_send"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:layout_below="@+id/tv_open"
+        android:padding="10dp"
+        android:text="测试" />
 
     <com.yaheen.o2park.widget.NameGroupView
         android:id="@+id/group_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/tv_open"
-        android:visibility="gone" />
+        android:layout_toRightOf="@+id/tv_open"
+        android:layout_centerInParent="true"
+        android:background="@drawable/bg_3"/>
+
+    <LinearLayout
+        android:id="@+id/ll_voice"
+        android:layout_toRightOf="@+id/tv_send"
+        android:layout_width="match_parent"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        android:background="@drawable/bg_voice"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/tv_name"
+            android:layout_width="wrap_content"
+            android:layout_gravity="center"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="30dp"
+            android:layout_marginTop="10dp"
+            android:lineSpacingMultiplier="1.2"/>
+
+    </LinearLayout>
 
 </RelativeLayout>
