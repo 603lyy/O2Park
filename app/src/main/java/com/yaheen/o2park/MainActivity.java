@@ -1,10 +1,25 @@
 package com.yaheen.o2park;
 
 import android.animation.Animator;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.nfc.NdefMessage;
+import android.nfc.NfcAdapter;
+import android.nfc.Tag;
+import android.nfc.tech.IsoDep;
+import android.nfc.tech.MifareUltralight;
+import android.nfc.tech.NfcA;
+import android.nfc.tech.NfcB;
+import android.nfc.tech.NfcF;
+import android.nfc.tech.NfcV;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.Spanned;
+import android.text.TextUtils;
 import android.text.style.AbsoluteSizeSpan;
 import android.util.Log;
 import android.view.View;
@@ -22,7 +37,10 @@ import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SynthesizerListener;
 import com.yaheen.o2park.bean.ChatMsgEntity;
 import com.yaheen.o2park.bean.TbChatMsg;
+import com.yaheen.o2park.util.AESUtils;
 import com.yaheen.o2park.util.AudioUtils;
+import com.yaheen.o2park.util.Converter;
+import com.yaheen.o2park.util.NFCUtils;
 import com.yaheen.o2park.util.SysUtils;
 import com.yaheen.o2park.widget.NameGroupView;
 
@@ -32,6 +50,8 @@ import org.xutils.common.Callback;
 import org.xutils.http.RequestParams;
 import org.xutils.x;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +59,16 @@ import de.tavendo.autobahn.WebSocketConnection;
 import de.tavendo.autobahn.WebSocketException;
 import de.tavendo.autobahn.WebSocketHandler;
 
+import static com.yaheen.o2park.util.NFCUtils.ByteArrayToHexString;
+import static com.yaheen.o2park.util.NFCUtils.toStringHex;
+
 public class MainActivity extends AppCompatActivity {
+
+    private NfcB nfcbTag;
+    private Tag tagFromIntent;
+    private NfcAdapter mNfcAdapter;
+    private PendingIntent mNfcPendingIntent;
+    private IntentFilter[] mNdefExchangeFilters;
 
     private WebSocketConnection mConnection = new WebSocketConnection();
 
@@ -49,23 +78,32 @@ public class MainActivity extends AppCompatActivity {
 
     private RelativeLayout relativeLayout;
 
-    private LinearLayout llVoice,llBg;
+    private LinearLayout llVoice, llBg;
+
+    private String ex_id = "", types = "";
 
     private SpannableString ss;
 
     private int i = 0;
 
     /**
+     * 名字列表的顺序
+     */
+    private int index = 0;
+
+    /**
      * 界面改变的次数
      */
     private int changeTime = 1;
 
-    private String nameStr[] = {"柯雪莉  女士", "南可安  先生", "邓家禧  先生", "白梅霞  女士",
-            "吴文慧  女士", "彭浩贤  先生", "麦天恩  先生", "梁敬章  先生", "梁振声  先生", "刘慧诗  女士"};
+    private String nameStr[] = new String[100];
+//            {"柯雪莉  女士", "南可安  先生", "邓家禧  先生", "白梅霞  女士",
+//            "吴文慧  女士", "彭浩贤  先生", "麦天恩  先生", "梁敬章  先生", "梁振声  先生", "刘慧诗  女士"};
 
-    private String companyStr[] = {"以色列领事", "以色列领事", "香港特区驻粤办", "香港特区驻粤办",
-            "香港贸发局", "香港商会（广东）", "香港商会（广东）", "香港商会（广东）",
-            "香港电讯盈科中国", "希尔顿酒店"};
+    private String companyStr[] = new String[100];
+//            {"以色列领事", "以色列领事", "香港特区驻粤办", "香港特区驻粤办",
+//            "香港贸发局", "香港商会（广东）", "香港商会（广东）", "香港商会（广东）",
+//            "香港电讯盈科中国", "希尔顿酒店"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,11 +124,8 @@ public class MainActivity extends AppCompatActivity {
         tvOpen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                initWebSocket();
+                initWebSocket();
 //                parkTest();
-//                groupView.setVisibility(View.VISIBLE);
-//                llVoice.setVisibility(View.GONE);
-                changeView();
             }
         });
 
@@ -98,10 +133,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 showWellcomeView();
-                if(!AudioUtils.getInstance().isSpeaking()){
+                if (!AudioUtils.getInstance().isSpeaking()) {
                     ss = new SpannableString(nameStr[i] + "\n" + companyStr[i]);
-                    ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr.length - 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    ss.setSpan(new AbsoluteSizeSpan(35), nameStr.length - 1, ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr[i].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    ss.setSpan(new AbsoluteSizeSpan(35), nameStr[i].length(), ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     tvName.setText(ss);
                 }
                 AudioUtils.getInstance().addText("欢迎" + nameStr[i] + "的莅临");
@@ -117,17 +152,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //初始化语音对象
-        AudioUtils.getInstance().init(getApplicationContext(), speakListener);
-        groupView.setListener(animatorListener);
-
         relativeLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
                 if (groupView.getVisibility() == View.VISIBLE && changeTime == 0) {
-                    SpannableString span = new SpannableString(nameStr[AudioUtils.getInstance().getIndex()] + "\n" + companyStr[AudioUtils.getInstance().getIndex()]);
-                    span.setSpan(new AbsoluteSizeSpan(14), 0, 7, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    span.setSpan(new AbsoluteSizeSpan(8), 8, span.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    index = AudioUtils.getInstance().getIndex();
+                    SpannableString span = new SpannableString(nameStr[index] + "\n" + companyStr[index]);
+                    span.setSpan(new AbsoluteSizeSpan(14), 0, nameStr[index].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    span.setSpan(new AbsoluteSizeSpan(8), nameStr[index].length(), span.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     groupView.addName(span);
                     changeTime = 1;
                 }
@@ -136,6 +168,193 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        //初始化语音对象
+        AudioUtils.getInstance().init(getApplicationContext(), speakListener);
+        groupView.setListener(animatorListener);
+        initNFC();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if (mNfcAdapter == null) {
+            return;
+        }
+
+        if (!mNfcAdapter.isEnabled()) {
+            return;
+        }
+
+        //nfc自动读取芯片内容后调用activity的onResume
+        if (mNfcAdapter != null) {
+            mNfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, null, null);
+            resolvIntent(getIntent());
+        }
+    }
+
+    private void initNFC() {
+        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);// 设备注册
+        if (mNfcAdapter == null) {
+            // 判断设备是否可用
+            Toast.makeText(this, "该设备不支持NFC功能", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!mNfcAdapter.isEnabled()) {
+            Toast.makeText(this, "请在系统设置中先启用NFC功能！", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(Settings.ACTION_NFC_SETTINGS));
+            finish();
+            return;
+        }
+        mNfcPendingIntent = PendingIntent.getActivity(this, 0, new Intent(this,
+                getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
+
+        IntentFilter ndefDetected = new IntentFilter(
+                NfcAdapter.ACTION_NDEF_DISCOVERED);
+        try {
+            ndefDetected.addDataType("*/*");// text/plain
+        } catch (IntentFilter.MalformedMimeTypeException e) {
+        }
+
+        IntentFilter td = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
+        IntentFilter ttech = new IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED);
+        mNdefExchangeFilters = new IntentFilter[]{ndefDetected, ttech, td};
+    }
+
+    private void resolvIntent(Intent intent) {
+        String action = intent.getAction();
+        //toast(action);
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
+            tagFromIntent = getIntent()
+                    .getParcelableExtra(NfcAdapter.EXTRA_TAG);
+            getresult(tagFromIntent);
+//            Parcelable[] rawMsgs = getIntent().getParcelableArrayExtra(
+//                    NfcAdapter.EXTRA_NDEF_MESSAGES);
+//            NdefMessage[] msgs;
+//            if (rawMsgs != null) {
+//                msgs = new NdefMessage[rawMsgs.length];
+//                for (int i = 0; i < rawMsgs.length; i++) {
+//                    msgs[i] = (NdefMessage) rawMsgs[i];
+//                }
+//            } else {
+//                // Unknown tag type
+//                byte[] empty = new byte[]{};
+//                NdefRecord record = new NdefRecord(NdefRecord.TNF_UNKNOWN,   //NdefRecord.TNF_UNKNOWN
+//                        empty, empty, empty);
+//                NdefMessage msg = new NdefMessage(new NdefRecord[]{record});
+//                msgs = new NdefMessage[]{msg};
+//            }
+//            setUpWebView(msgs);
+            // dialog(ByteArrayToHexString(msgs[0].getRecords()[0].getPayload()));
+            //	dialog(msgs[0].getRecords()[0].getPayload()));
+        } else if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
+            // 处理该intent
+            tagFromIntent = getIntent()
+                    .getParcelableExtra(NfcAdapter.EXTRA_TAG);
+            getresult(tagFromIntent);
+
+        } else if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)) {
+            types = "Tag";
+            tagFromIntent = getIntent()
+                    .getParcelableExtra(NfcAdapter.EXTRA_TAG);
+            getresult(tagFromIntent);
+        }
+    }
+
+    void getresult(Tag tag) {
+        ArrayList<String> list = new ArrayList<String>();
+        types = "";
+        for (String string : tag.getTechList()) {
+            list.add(string);
+            types += string.substring(string.lastIndexOf(".") + 1, string.length()) + ",";
+        }
+        types = types.substring(0, types.length() - 1);
+        if (list.contains("android.nfc.tech.MifareUltralight")) {
+            String str = readTagUltralight(tag);
+            setNoteBody(str);
+        }
+    }
+
+    public String readTagUltralight(Tag tag) {
+        MifareUltralight mifare = MifareUltralight.get(tag);
+        try {
+            mifare.connect();
+            StringBuffer sb = new StringBuffer();
+            byte[] no10 = new byte[4];  //校验芯片
+            byte[] no11 = new byte[4];  //数据块数量
+
+            byte[] readTag = mifare.readPages(10);
+
+            byte[] readCount = mifare.readPages(11);
+
+            if (readTag.length >= 4) {
+
+                for (int i = 0; i < 4; i++) {
+                    no10[i] = readTag[i];
+                }
+
+                String tagStr = toStringHex(ByteArrayToHexString(no10));
+
+                if (tagStr.equals("YAHN")) {
+                    for (int i = 0; i < 4; i++) {
+                        no11[i] = readCount[i];
+                    }
+
+                    String countStr = toStringHex(ByteArrayToHexString(no11));
+                    int count = Integer.valueOf(countStr.trim());
+
+                    for (int i = 12; i < (count); i++) {
+                        byte[] readResult = mifare.readPages(i);
+                        if (i % 4 == 0) {
+                            if (i == count) {
+                                byte[] codeEnd = new byte[4];
+                                for (int j = 0; j < 4; j++) {
+                                    codeEnd[j] = readResult[j];
+                                }
+                                sb.append(ByteArrayToHexString(codeEnd));
+                            } else {
+                                sb.append(ByteArrayToHexString(readResult));
+                            }
+                        }
+                    }
+                }
+            }
+            //  String  str=toStringHex(sb.toString());
+
+//            String finalResult = AESUtils.decryptToString(toStringHex(sb.toString()), "X2Am6tVLnwMMX8kVgdDk5w==");
+            String finalResult = toStringHex(sb.toString());
+
+            return finalResult;
+
+        } catch (IOException e) {
+//            Log.e(TAG, "IOException while writing MifareUltralight message...", e);
+            return "";
+        } catch (Exception ee) {
+//            Log.e(TAG, "IOException while writing MifareUltralight message...", ee);
+            return "";
+        } finally {
+            if (mifare != null) {
+                try {
+                    mifare.close();
+                } catch (IOException e) {
+//                    Log.e(TAG, "Error closing tag...", e);
+                }
+            }
+        }
+    }
+
+    private void setNoteBody(final String body) {
+
+        if (!TextUtils.isEmpty(body)) {
+            String[] bodys = body.trim().split("\\|");
+
+            if (bodys.length > 2 || bodys.length == 3) {
+//                Log.i("lin", "setNoteBody: " + bodys[0] + "   " + bodys[1] + "   " + bodys[2]);
+                String companys[] = bodys[2].trim().split("#");
+                TbChatMsg chatMsg = new TbChatMsg(bodys[0], bodys[1], companys[0]);
+            }
+        }
     }
 
     //属性动画监听
@@ -147,9 +366,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onAnimationEnd(Animator animator) {
-            if(AudioUtils.getInstance().hasNext()){
+            if (AudioUtils.getInstance().hasNext()) {
                 showWellcomeView();
-                ss = new SpannableString(nameStr[(AudioUtils.getInstance().getIndex()+1)%10] + "\n" + companyStr[(AudioUtils.getInstance().getIndex()+1)%10]);
+                ss = new SpannableString(nameStr[(AudioUtils.getInstance().getIndex() + 1) % 10] + "\n" + companyStr[(AudioUtils.getInstance().getIndex() + 1) % 10]);
                 ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr.length - 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 ss.setSpan(new AbsoluteSizeSpan(35), nameStr.length - 1, ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 tvName.setText(ss);
@@ -256,7 +475,7 @@ public class MainActivity extends AppCompatActivity {
         //注意连接和服务名称要一致
         /*final String wsuri = "ws://192.168.0.2：8080/st/sosWebSocketService?userCode="
                 + spu.getValue(LoginActivity.STR_USERNAME);*/
-        String wsuri = "ws://192.168.199.112:8080/o2park" + "/ws/chat.do?hardwareId="
+        String wsuri = "ws://192.168.199.125:8080/o2park" + "/ws/chat.do?hardwareId="
                 + SysUtils.android_id(MainActivity.this);
 
         if (mConnection == null) {
@@ -275,6 +494,7 @@ public class MainActivity extends AppCompatActivity {
         public void onOpen() {
             tvOpen.setVisibility(View.GONE);
             groupView.setVisibility(View.VISIBLE);
+            changeTime=1;
             changeView();
             Toast.makeText(MainActivity.this, "连接服务器成功", Toast.LENGTH_SHORT).show();
         }
@@ -283,9 +503,21 @@ public class MainActivity extends AppCompatActivity {
         public void onTextMessage(String text) {
             Gson gson = new Gson();
             TbChatMsg chatMsg = gson.fromJson(text, TbChatMsg.class);
-            tvSend.setText(chatMsg.getMsg());
-//            groupView.addName(chatMsg.getMsg());
-//            AudioUtils.getInstance().speakText(chatMsg.getMsg());
+            companyStr[i] = chatMsg.getUnit();
+            if("F".equals(chatMsg.getUnit())){
+                nameStr[i] = chatMsg.getUserName()+"  女士";
+            }else {
+                nameStr[i] = chatMsg.getUserName()+"  先生";
+            }
+            showWellcomeView();
+            if (!AudioUtils.getInstance().isSpeaking()) {
+                ss = new SpannableString(nameStr[i] + "\n" + companyStr[i]);
+                ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr[i].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ss.setSpan(new AbsoluteSizeSpan(35), nameStr[i].length(), ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                tvName.setText(ss);
+            }
+            AudioUtils.getInstance().addText("欢迎" + nameStr[i] + "的莅临");
+            i++;
         }
 
         @Override
@@ -300,17 +532,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void changeView() {
-        ViewGroup.LayoutParams Params = groupView.getLayoutParams();
-        Params.width = relativeLayout.getHeight();
-        groupView.setLayoutParams(Params);
-//        ViewGroup.LayoutParams ParamsBg = llBg.getLayoutParams();
-//        ParamsBg.width = relativeLayout.getHeight();
-//        groupView.setLayoutParams(ParamsBg);
+        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) groupView.getLayoutParams();
+        params.addRule(RelativeLayout.CENTER_IN_PARENT);
+        params.width = relativeLayout.getHeight();
+        groupView.setLayoutParams(params);
     }
 
-    public void showWellcomeView(){
+    public void showWellcomeView() {
         groupView.setVisibility(View.GONE);
         llVoice.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        // NDEF exchange mode
+        // 读取uidgetIntent()
+        byte[] myNFCID = intent.getByteArrayExtra(NfcAdapter.EXTRA_ID);
+        ex_id = Converter.getHexString(myNFCID, myNFCID.length);
+        // 读取uidgetIntent()
+        setIntent(intent);
     }
 
     @Override

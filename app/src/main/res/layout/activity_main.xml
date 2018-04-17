@@ -13,26 +13,25 @@
         android:layout_height="50dp"
         android:gravity="center"
         android:padding="10dp"
-        android:visibility="gone"
-        android:text="打开界面" />
+        android:text="连接服务器"/>
 
     <TextView
         android:id="@+id/tv_send"
         android:layout_width="wrap_content"
         android:layout_height="50dp"
-        android:gravity="center"
         android:layout_below="@+id/tv_open"
+        android:gravity="center"
         android:padding="10dp"
         android:text="测试" />
 
     <LinearLayout
         android:id="@+id/ll_bg"
-        android:orientation="horizontal"
         android:layout_width="300dp"
         android:layout_height="300dp"
-        android:visibility="gone"
         android:layout_toRightOf="@+id/tv_send"
-        android:background="@drawable/bg_new">
+        android:background="@drawable/bg_new"
+        android:orientation="horizontal"
+        android:visibility="gone">
 
     </LinearLayout>
 
@@ -40,28 +39,27 @@
         android:id="@+id/group_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_toRightOf="@+id/tv_send"
-        android:background="@drawable/bg_new"
         android:layout_centerInParent="true"
-        android:visibility="gone"/>
+        android:visibility="gone"
+        android:background="@drawable/bg_new" />
 
     <LinearLayout
         android:id="@+id/ll_voice"
-        android:layout_toRightOf="@+id/tv_send"
         android:layout_width="match_parent"
-        android:orientation="horizontal"
-        android:visibility="gone"
+        android:layout_height="match_parent"
+        android:layout_toRightOf="@+id/tv_send"
         android:background="@drawable/bg_voice"
-        android:layout_height="match_parent">
+        android:orientation="horizontal"
+        android:visibility="gone">
 
         <TextView
             android:id="@+id/tv_name"
             android:layout_width="wrap_content"
-            android:layout_gravity="center"
             android:layout_height="wrap_content"
             android:layout_marginLeft="30dp"
             android:layout_marginTop="10dp"
-            android:lineSpacingMultiplier="1.2"/>
+            android:layout_gravity="center"
+            android:lineSpacingMultiplier="1.2" />
 
     </LinearLayout>
 
