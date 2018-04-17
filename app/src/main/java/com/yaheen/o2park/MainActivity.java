@@ -96,6 +96,11 @@ public class MainActivity extends AppCompatActivity {
      */
     private int changeTime = 1;
 
+    /**
+     * 是否在读名字或者做动画
+     */
+    private boolean isDoing = false;
+
     private String nameStr[] = new String[100];
 //            {"柯雪莉  女士", "南可安  先生", "邓家禧  先生", "白梅霞  女士",
 //            "吴文慧  女士", "彭浩贤  先生", "麦天恩  先生", "梁敬章  先生", "梁振声  先生", "刘慧诗  女士"};
@@ -126,6 +131,10 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 initWebSocket();
 //                parkTest();
+//                SpannableString span = new SpannableString("杨鸿南  先生\n广州壹物壹码物联网信息技\n术有限公司");
+//                span.setSpan(new AbsoluteSizeSpan(14), 0, nameStr[index].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+//                span.setSpan(new AbsoluteSizeSpan(8), nameStr[index].length(), span.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+//                groupView.addName(span);
             }
         });
 
@@ -157,6 +166,11 @@ public class MainActivity extends AppCompatActivity {
             public void onGlobalLayout() {
                 if (groupView.getVisibility() == View.VISIBLE && changeTime == 0) {
                     index = AudioUtils.getInstance().getIndex();
+                    if (companyStr[index].length() > 12) {
+                        StringBuilder stringBuilder = new StringBuilder(companyStr[index]);
+                        stringBuilder.insert(12, "\n");
+                        companyStr[index] = stringBuilder.toString();
+                    }
                     SpannableString span = new SpannableString(nameStr[index] + "\n" + companyStr[index]);
                     span.setSpan(new AbsoluteSizeSpan(14), 0, nameStr[index].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     span.setSpan(new AbsoluteSizeSpan(8), nameStr[index].length(), span.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -350,9 +364,9 @@ public class MainActivity extends AppCompatActivity {
             String[] bodys = body.trim().split("\\|");
 
             if (bodys.length > 2 || bodys.length == 3) {
-//                Log.i("lin", "setNoteBody: " + bodys[0] + "   " + bodys[1] + "   " + bodys[2]);
                 String companys[] = bodys[2].trim().split("#");
                 TbChatMsg chatMsg = new TbChatMsg(bodys[0], bodys[1], companys[0]);
+                speakName(chatMsg);
             }
         }
     }
@@ -368,10 +382,13 @@ public class MainActivity extends AppCompatActivity {
         public void onAnimationEnd(Animator animator) {
             if (AudioUtils.getInstance().hasNext()) {
                 showWellcomeView();
-                ss = new SpannableString(nameStr[(AudioUtils.getInstance().getIndex() + 1) % 10] + "\n" + companyStr[(AudioUtils.getInstance().getIndex() + 1) % 10]);
-                ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr.length - 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                ss.setSpan(new AbsoluteSizeSpan(35), nameStr.length - 1, ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                index = AudioUtils.getInstance().getIndex();
+                ss = new SpannableString(nameStr[index + 1] + "\n" + companyStr[index + 1]);
+                ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr[index + 1].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ss.setSpan(new AbsoluteSizeSpan(35), nameStr[index + 1].length(), ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 tvName.setText(ss);
+            } else {
+                isDoing = false;
             }
             AudioUtils.getInstance().speakText();
         }
@@ -494,7 +511,7 @@ public class MainActivity extends AppCompatActivity {
         public void onOpen() {
             tvOpen.setVisibility(View.GONE);
             groupView.setVisibility(View.VISIBLE);
-            changeTime=1;
+            changeTime = 1;
             changeView();
             Toast.makeText(MainActivity.this, "连接服务器成功", Toast.LENGTH_SHORT).show();
         }
@@ -503,21 +520,7 @@ public class MainActivity extends AppCompatActivity {
         public void onTextMessage(String text) {
             Gson gson = new Gson();
             TbChatMsg chatMsg = gson.fromJson(text, TbChatMsg.class);
-            companyStr[i] = chatMsg.getUnit();
-            if("F".equals(chatMsg.getUnit())){
-                nameStr[i] = chatMsg.getUserName()+"  女士";
-            }else {
-                nameStr[i] = chatMsg.getUserName()+"  先生";
-            }
-            showWellcomeView();
-            if (!AudioUtils.getInstance().isSpeaking()) {
-                ss = new SpannableString(nameStr[i] + "\n" + companyStr[i]);
-                ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr[i].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                ss.setSpan(new AbsoluteSizeSpan(35), nameStr[i].length(), ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                tvName.setText(ss);
-            }
-            AudioUtils.getInstance().addText("欢迎" + nameStr[i] + "的莅临");
-            i++;
+            speakName(chatMsg);
         }
 
         @Override
@@ -529,6 +532,58 @@ public class MainActivity extends AppCompatActivity {
         public void onClose(int code, String reason) {
             Toast.makeText(MainActivity.this, "连接服务器失败", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void speakName(TbChatMsg chatMsg) {
+        companyStr[i] = chatMsg.getUnit();
+        if (chatMsg.getUserName().equals("Shirly Coifman") || chatMsg.getUserName().equals("Nadav Cohen")) {
+            nameStr[i] = chatMsg.getUserName();
+        } else if ("F".equals(chatMsg.getSex())) {
+            nameStr[i] = chatMsg.getUserName() + "  女士";
+        } else {
+            nameStr[i] = chatMsg.getUserName() + "  先生";
+        }
+        if (!isDoing) {
+            showWellcomeView();
+            ss = new SpannableString(nameStr[i] + "\n" + companyStr[i]);
+            ss.setSpan(new AbsoluteSizeSpan(50), 0, nameStr[i].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            ss.setSpan(new AbsoluteSizeSpan(35), nameStr[i].length(), ss.toString().length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            tvName.setText(ss);
+            isDoing = true;
+        }
+        AudioUtils.getInstance().addText("欢迎" + nameStr[i] + "的莅临");
+        i++;
+    }
+
+    private void checkUser(TbChatMsg chatMsg) {
+        RequestParams params = new RequestParams("http://tlep2.yaheen.com/eapi/checkUser.do");
+        params.addQueryStringParameter("username", chatMsg.getUserName());
+        params.addQueryStringParameter("sex", chatMsg.getSex());
+        params.addQueryStringParameter("unit", chatMsg.getUnit());
+        params.setHeader("Accept-Language", "zh-CN,zh");
+        params.setHeader("Content-Type", "application/json");
+        params.setHeader("Charset", "utf-8");
+        params.setHeader("Accept", "text/html,application/xhtml+xml,application/xml");
+        x.http().post(params, new Callback.CommonCallback<String>() {
+            @Override
+            public void onSuccess(String result) {
+            }
+
+            @Override
+            public void onError(Throwable ex, boolean isOnCallback) {
+
+            }
+
+            @Override
+            public void onCancelled(CancelledException cex) {
+
+            }
+
+            @Override
+            public void onFinished() {
+
+            }
+        });
     }
 
     private void changeView() {

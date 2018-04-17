@@ -3,9 +3,7 @@ package com.yaheen.o2park.bean;
 
 public class TbChatMsg {
 
-	private static final long serialVersionUID = 421209447912013905l;
-
-	public TbChatMsg(String userName, String sex, String company) {
+	public TbChatMsg(String userName, String sex, String unit) {
 		this.userName = userName;
 		this.sex = sex;
 		this.unit  = unit ;

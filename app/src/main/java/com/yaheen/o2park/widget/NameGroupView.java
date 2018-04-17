@@ -242,7 +242,7 @@ public class NameGroupView extends RelativeLayout {
         float endY = 0;
         float endX = 0;
 
-        endY = circleY - 80 + (yIndex - time) * 43;
+        endY = circleY - 60 + (yIndex - time) * 43;
         endX = circleX + (xIndex - 2) * 105;
 
         if (textLocation == 1) {
@@ -274,9 +274,6 @@ public class NameGroupView extends RelativeLayout {
                 yIndex--;
             }
         }
-
-//        endY = circleY - 80 + (time - 1) * 43;
-//        endX = circleX + (time-2)*105;
 
         lastY = endY;
         lastX = endX;
