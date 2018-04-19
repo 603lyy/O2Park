@@ -116,20 +116,21 @@ public class AudioUtils {
         mySynthesizer.startSpeaking(content, synthesizerListener);
     }
 
-    public boolean hasNext(){
-        if(index==nameList.size()){
+    public boolean hasNext() {
+        if (index == nameList.size()) {
             return false;
-        }else {
+        } else {
             return true;
         }
     }
 
-    public boolean isSpeaking(){
+    public boolean isSpeaking() {
         return mySynthesizer.isSpeaking();
     }
 
     public int getIndex() {
-        return (index - 1)%10;
+//        return (index - 1)%10;
+        return index - 1;
     }
 
     public static void destorySpeak() {
