@@ -1,19 +1,16 @@
 package com.yaheen.o2park;
 
 import android.animation.Animator;
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
-import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareUltralight;
-import android.nfc.tech.NfcA;
 import android.nfc.tech.NfcB;
-import android.nfc.tech.NfcF;
-import android.nfc.tech.NfcV;
+import android.os.Handler;
+import android.os.Message;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -23,10 +20,9 @@ import android.text.TextUtils;
 import android.text.style.AbsoluteSizeSpan;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -35,12 +31,9 @@ import android.widget.Toast;
 import com.google.gson.Gson;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SynthesizerListener;
-import com.yaheen.o2park.bean.ChatMsgEntity;
 import com.yaheen.o2park.bean.TbChatMsg;
-import com.yaheen.o2park.util.AESUtils;
 import com.yaheen.o2park.util.AudioUtils;
 import com.yaheen.o2park.util.Converter;
-import com.yaheen.o2park.util.NFCUtils;
 import com.yaheen.o2park.util.SysUtils;
 import com.yaheen.o2park.widget.NameGroupView;
 
@@ -51,9 +44,7 @@ import org.xutils.http.RequestParams;
 import org.xutils.x;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.List;
 
 import de.tavendo.autobahn.WebSocketConnection;
 import de.tavendo.autobahn.WebSocketException;
@@ -63,6 +54,11 @@ import static com.yaheen.o2park.util.NFCUtils.ByteArrayToHexString;
 import static com.yaheen.o2park.util.NFCUtils.toStringHex;
 
 public class MainActivity extends AppCompatActivity {
+
+    /**
+     * 定时发送信息
+     */
+    public static final int MSG_SEND = 1000;
 
     private NfcB nfcbTag;
     private Tag tagFromIntent;
@@ -74,11 +70,13 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tvOpen, tvSend, tvName;
 
+    private EditText etIP;
+
     private NameGroupView groupView;
 
     private RelativeLayout relativeLayout;
 
-    private LinearLayout llVoice, llBg;
+    private LinearLayout llVoice, llBtn;
 
     private String ex_id = "", types = "";
 
@@ -118,7 +116,8 @@ public class MainActivity extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main);
 
-        llBg = findViewById(R.id.ll_bg);
+        etIP = findViewById(R.id.et_ip);
+        llBtn = findViewById(R.id.ll_btn);
         tvOpen = findViewById(R.id.tv_open);
         tvSend = findViewById(R.id.tv_send);
         tvName = findViewById(R.id.tv_name);
@@ -141,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
         tvSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                mHandler.sendEmptyMessageDelayed(MSG_SEND, 4 * 1000);
                 showWellcomeView();
                 if (!AudioUtils.getInstance().isSpeaking()) {
                     ss = new SpannableString(nameStr[i] + "\n" + companyStr[i]);
@@ -218,8 +218,6 @@ public class MainActivity extends AppCompatActivity {
         if (!mNfcAdapter.isEnabled()) {
             Toast.makeText(this, "请在系统设置中先启用NFC功能！", Toast.LENGTH_SHORT).show();
             startActivity(new Intent(Settings.ACTION_NFC_SETTINGS));
-            finish();
-            return;
         }
         mNfcPendingIntent = PendingIntent.getActivity(this, 0, new Intent(this,
                 getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
@@ -490,9 +488,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initWebSocket() {
         //注意连接和服务名称要一致
-        /*final String wsuri = "ws://192.168.0.2：8080/st/sosWebSocketService?userCode="
-                + spu.getValue(LoginActivity.STR_USERNAME);*/
-        String wsuri = "ws://192.168.199.125:8080/o2park" + "/ws/chat.do?hardwareId="
+        String wsuri = "ws://" + etIP.getText().toString() + "/o2park/ws/chat.do?hardwareId="
                 + SysUtils.android_id(MainActivity.this);
 
         if (mConnection == null) {
@@ -509,10 +505,11 @@ public class MainActivity extends AppCompatActivity {
     private class mWebSocketHandler extends WebSocketHandler {
         @Override
         public void onOpen() {
-            tvOpen.setVisibility(View.GONE);
+            llBtn.setVisibility(View.GONE);
             groupView.setVisibility(View.VISIBLE);
             changeTime = 1;
             changeView();
+            mHandler.sendEmptyMessageDelayed(MSG_SEND, 4 * 60 * 1000);
             Toast.makeText(MainActivity.this, "连接服务器成功", Toast.LENGTH_SHORT).show();
         }
 
@@ -553,6 +550,29 @@ public class MainActivity extends AppCompatActivity {
         }
         AudioUtils.getInstance().addText("欢迎" + nameStr[i] + "的莅临");
         i++;
+    }
+
+    @SuppressLint("HandlerLeak")
+    private Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case MSG_SEND:
+                    sendMsg();
+                    break;
+            }
+        }
+    };
+
+    public void sendMsg() {
+        if (mConnection.isConnected()) {
+            String str = "心跳";
+            mConnection.sendTextMessage(str);
+        } else {
+            initWebSocket();
+        }
+        mHandler.sendEmptyMessageDelayed(MSG_SEND, 4 * 60 * 1000);
     }
 
     private void checkUser(TbChatMsg chatMsg) {
