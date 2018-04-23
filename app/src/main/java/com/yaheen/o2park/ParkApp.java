@@ -14,8 +14,8 @@ public class ParkApp extends Application {
         super.onCreate();
         x.Ext.init(this);
         x.Ext.setDebug(false); //输出debug日志，开启会影响性能
-        SpeechUtility.createUtility(getApplicationContext(), "appid=5acd6bec,");
-//        SpeechUtility.createUtility(getApplicationContext(), "appid=5ad43df7,");
+//        SpeechUtility.createUtility(getApplicationContext(), "appid=5acd6bec,");
+        SpeechUtility.createUtility(getApplicationContext(), "appid=5add52a2,");
     }
 
 }
