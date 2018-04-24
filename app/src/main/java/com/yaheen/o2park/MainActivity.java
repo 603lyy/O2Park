@@ -509,7 +509,7 @@ public class MainActivity extends AppCompatActivity {
             groupView.setVisibility(View.VISIBLE);
             changeTime = 1;
             changeView();
-            mHandler.sendEmptyMessageDelayed(MSG_SEND, 4 * 60 * 1000);
+            mHandler.sendEmptyMessageDelayed(MSG_SEND, 1 * 60 * 1000);
             Toast.makeText(MainActivity.this, "连接服务器成功", Toast.LENGTH_SHORT).show();
         }
 
@@ -572,7 +572,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             initWebSocket();
         }
-        mHandler.sendEmptyMessageDelayed(MSG_SEND, 4 * 60 * 1000);
+        mHandler.sendEmptyMessageDelayed(MSG_SEND, 1 * 60 * 1000);
     }
 
     private void checkUser(TbChatMsg chatMsg) {
