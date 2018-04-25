@@ -1,8 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        release {
+            keyAlias 'o2park'
+            keyPassword 'yaheen'
+            storeFile file('F:/lyy/Example/O2Park/o2park.jks')
+            storePassword 'yaheen'
+        }
+    }
     compileSdkVersion 27
-
     defaultConfig {
         applicationId "com.yaheen.o2park"
         minSdkVersion 18
@@ -15,6 +22,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
